@@ -38,8 +38,8 @@
     <label>4. Số lượng lỗ đục:</label>
     <input type="number" id="gapCount" value="10" min="1">
 
-    <label>5. Web App URL (Dán link từ Google Sheets):</label>
-   <input type="text" id="sheetUrl" value="https://script.google.com/macros/s/AKfycby4sk9xnNXe2BMs35n1ZG26wtL38SQMz5RB-gq96MimVilXWG1QNQz3Xim6sUeAyTs8/exec" style="background:#e8f0fe;" readonly>
+    <label>5. Web App URL (Đã khóa cứng):</label>
+    <input type="text" id="sheetUrl" value="https://script.google.com/macros/s/AKfycby4sk9xnNXe2BMs35n1ZG26wtL38SQMz5RB-gq96MimVilXWG1QNQz3Xim6sUeAyTs8/exec" style="background:#e8f0fe;" readonly>
 
     <button onclick="createTest()">LƯU ĐỀ VÀO HỆ THỐNG</button>
 
@@ -47,12 +47,11 @@
 </div>
 
 <script>
-    // Logic ẩn hiện ô nhập tên giáo viên khác
     document.getElementById('teacherSelect').addEventListener('change', function() {
         document.getElementById('teacherCustom').style.display = (this.value === 'Giáo viên khác...') ? 'block' : 'none';
     });
 
-  function createTest() {
+    function createTest() {
         const btn = document.querySelector('button');
         const url = document.getElementById('sheetUrl').value.trim();
         let teacher = document.getElementById('teacherSelect').value;
@@ -62,15 +61,14 @@
         const script = document.getElementById('scriptInput').value.trim();
         const gaps = document.getElementById('gapCount').value;
 
-        // KIỂM TRA CHI TIẾT XEM THIẾU THÔNG TIN NÀO
         let missing = [];
         if (!testName) missing.push("Tên bài bài tập");
         if (!script) missing.push("Nội dung Audio Script");
-        if (!url) missing.push("Web App URL (Link Google Sheets)");
-        if (teacher === 'Giáo viên khác...' && !teacher) missing.push("Tên giáo viên tùy chỉnh");
+        if (!teacher) missing.push("Tên giáo viên tùy chỉnh");
 
         if (missing.length > 0) {
-            return alert("Hệ thống phát hiện bạn chưa điền đủ:\n- " + missing.join("\n- "));
+            alert("Hệ thống phát hiện bạn chưa điền đủ:\n- " + missing.join("\n- "));
+            return;
         }
 
         const payload = {
@@ -84,24 +82,29 @@
         btn.innerText = "Đang lưu...";
         btn.disabled = true;
 
-  // Gửi dữ liệu thẳng lên Google Sheets
+        // Bùa chú chống mọi lỗi chặn CORS của Github
         fetch(url, {
             method: "POST",
+            mode: "no-cors", 
             headers: {
-                "Content-Type": "text/plain;charset=utf-8", // <-- Thêm dòng này để chống lỗi CORS
+                "Content-Type": "text/plain;charset=utf-8"
             },
             body: JSON.stringify(payload)
         })
-        .then(response => response.json()) // <-- Thêm dòng này để đọc phản hồi
-        .then(data => {
+        .then(() => {
+            // Do no-cors, trình duyệt sẽ đẩy data đi mà không cần chờ phản hồi, nên cứ auto thành công
             document.getElementById('msg').style.display = 'block';
             btn.innerText = "LƯU ĐỀ VÀO HỆ THỐNG";
             btn.disabled = false;
-            document.getElementById('scriptInput').value = ""; // Xóa kịch bản cũ
+            document.getElementById('scriptInput').value = ""; 
         })
         .catch(err => {
-            alert("Lỗi kết nối! Vui lòng kiểm tra lại mạng hoặc Web App URL.");
-            console.error(err); // In lỗi ra F12 để dễ dò
+            alert("Lỗi kết nối mạng cục bộ!");
             btn.innerText = "LƯU ĐỀ VÀO HỆ THỐNG";
             btn.disabled = false;
         });
+    }
+</script>
+
+</body>
+</html>
