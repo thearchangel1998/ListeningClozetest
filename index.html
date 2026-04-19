@@ -84,21 +84,24 @@
         btn.innerText = "Đang lưu...";
         btn.disabled = true;
 
-        // Gửi dữ liệu lên Google Sheets
+  // Gửi dữ liệu thẳng lên Google Sheets
         fetch(url, {
             method: "POST",
+            headers: {
+                "Content-Type": "text/plain;charset=utf-8", // <-- Thêm dòng này để chống lỗi CORS
+            },
             body: JSON.stringify(payload)
         })
-        .then(() => {
+        .then(response => response.json()) // <-- Thêm dòng này để đọc phản hồi
+        .then(data => {
             document.getElementById('msg').style.display = 'block';
             btn.innerText = "LƯU ĐỀ VÀO HỆ THỐNG";
             btn.disabled = false;
-            // Tự động xóa kịch bản để sẵn sàng tạo đề tiếp theo
-            document.getElementById('scriptInput').value = "";
+            document.getElementById('scriptInput').value = ""; // Xóa kịch bản cũ
         })
         .catch(err => {
             alert("Lỗi kết nối! Vui lòng kiểm tra lại mạng hoặc Web App URL.");
+            console.error(err); // In lỗi ra F12 để dễ dò
             btn.innerText = "LƯU ĐỀ VÀO HỆ THỐNG";
             btn.disabled = false;
         });
-    }
