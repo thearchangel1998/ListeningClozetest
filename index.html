@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Công cụ tạo đề đục lỗ tự động</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; color: #333; }
+        .container { max-width: 800px; margin: auto; background: #fff; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; text-align: center; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        label { font-weight: bold; margin-top: 15px; display: block; color: #2980b9; }
+        textarea, input[type="number"], input[type="text"] { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-family: inherit; font-size: 15px; }
+        textarea { height: 150px; resize: vertical; }
+        button { background: #27ae60; color: white; border: none; padding: 15px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 25px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;}
+        button:hover { background: #2196f3; }
+        .output-section { margin-top: 30px; display: none; padding-top: 20px; border-top: 2px dashed #ccc; }
+        #outputCode { height: 200px; background: #2d3436; color: #00cec9; font-family: monospace; font-size: 14px;}
+        .copy-btn { background: #34495e; margin-top: 10px; }
+        .copy-btn:hover { background: #2c3e50; }
+        .input-group { display: flex; gap: 15px; }
+        .input-group > div { flex: 1; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Công cụ Tạo Đề Đục Lỗ Tự Động</h1>
+    
+    <div class="input-group">
+        <div>
+            <label>1. Tên bài Test:</label>
+            <input type="text" id="testName" placeholder="Ví dụ: APTIS Listening Test 2" value="Succeed in APTIS - Test 1">
+        </div>
+        <div>
+            <label>2. Tên Giáo viên / Trung tâm:</label>
+            <input type="text" id="teacherName" placeholder="Ví dụ: Thầy Nam - Easy Edu">
+        </div>
+    </div>
+
+    <label>3. Nhập toàn bộ Audio Script (Tiếng Anh):</label>
+    <textarea id="scriptInput" placeholder="Dán kịch bản bài nghe vào đây..."></textarea>
+
+    <div class="input-group">
+        <div>
+            <label>4. Số lượng lỗ đục:</label>
+            <input type="number" id="gapCount" min="1" value="10">
+        </div>
+        <div>
+            <label>5. Link Google Apps Script:</label>
+            <input type="text" id="sheetUrl" placeholder="https://script.google.com/macros/s/...">
+        </div>
+    </div>
+
+    <button onclick="generateTest()">Tạo file cho học sinh</button>
+
+    <div class="output-section" id="outputSection">
+        <label style="color: #27ae60;">🎉 Thành công! Copy toàn bộ code bên dưới, lưu thành file .html và gửi cho học sinh:</label>
+        <textarea id="outputCode" readonly></textarea>
+        <button class="copy-btn" onclick="copyCode()">Copy Code</button>
+    </div>
+</div>
+
+<script>
+    function generateTest() {
+        const testName = document.getElementById('testName').value.trim() || "Listening Test Worksheet";
+        const teacherName = document.getElementById('teacherName').value.trim();
+        const text = document.getElementById('scriptInput').value.trim();
+        const gapCount = parseInt(document.getElementById('gapCount').value);
+        const sheetUrl = document.getElementById('sheetUrl').value.trim();
+
+        if (!text || !sheetUrl) {
+            alert("Vui lòng nhập đầy đủ Audio Script và Link Google Sheets!");
+            return;
+        }
+
+        // Bước 1: Thuật toán tìm và đục lỗ ngẫu nhiên
+        let processedText = text;
+        const regex = /\b[a-zA-Z]{4,}\b/g;
+        let matches = [];
+        let match;
+        while ((match = regex.exec(text)) !== null) {
+            matches.push({ word: match[0], index: match.index });
+        }
+
+        if (matches.length < gapCount) {
+            alert(`Kịch bản quá ngắn, chỉ tìm được ${matches.length} từ phù hợp để đục lỗ. Vui lòng giảm số lượng lỗ.`);
+            return;
+        }
+
+        let shuffled = matches.sort(() => 0.5 - Math.random());
+        let selectedGaps = shuffled.slice(0, gapCount).sort((a, b) => b.index - a.index);
+
+        selectedGaps.forEach(gap => {
+            const inputHtml = `<input type="text" data-answer="${gap.word}">`;
+            processedText = processedText.substring(0, gap.index) + inputHtml + processedText.substring(gap.index + gap.word.length);
+        });
+
+        // Xử lý định dạng người nói (ví dụ M:, F:) và xuống dòng
+        let htmlContent = processedText.split('\\n').map(p => {
+            // Làm đậm tên người nói nếu có dạng "Tên:" hoặc "Chữ cái:" ở đầu dòng
+            let formattedLine = p.replace(/^([A-Za-z]+):/g, '<span class="speaker">$1:</span>');
+            return `<p>${formattedLine}</p>`;
+        }).join('');
+
+        // Sinh đoạn HTML tên giáo viên nếu có nhập
+        const teacherHtml = teacherName ? `<p style="text-align: center; color: #7f8c8d; font-size: 16px; margin-top: -10px; margin-bottom: 30px;">Giáo viên: <strong>${teacherName}</strong></p>` : '';
+
+        // Bước 2: Ghép vào Template HTML của học sinh
+        const studentTemplate = `<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${testName}</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; line-height: 1.8; color: #333; max-width: 900px; margin: 0 auto; padding: 20px; background: #f4f7f6; }
+        .container { background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: #2c3e50; border-bottom: 3px solid #3498db; padding-bottom: 15px; margin-bottom: 15px;}
+        #welcome-screen { text-align: center; padding: 50px 20px; }
+        #student-name-input { padding: 12px; font-size: 18px; border: 2px solid #bdc3c7; border-radius: 8px; width: 300px; margin-bottom: 20px; outline: none; text-align: center;}
+        #student-name-input:focus { border-color: #3498db; }
+        #worksheet-content { display: none; }
+        .speaker { font-weight: bold; color: #e74c3c; }
+        input[type="text"] { border: none; border-bottom: 2px solid #7f8c8d; background: transparent; width: 110px; text-align: center; font-size: 16px; outline: none; transition: all 0.3s; color: #2c3e50; font-family: inherit;}
+        input[type="text"]:focus { border-bottom: 2px solid #3498db; background: #ebf5fb; }
+        input[type="text"]:disabled { background: transparent; cursor: not-allowed; opacity: 1; }
+        .correct:disabled { color: #27ae60 !important; border-bottom: 2px solid #27ae60 !important; font-weight: bold; }
+        .incorrect:disabled { color: #c0392b !important; border-bottom: 2px solid #c0392b !important; text-decoration: line-through; background: #fdeaea; }
+        .correction-label { color: #27ae60; font-weight: bold; background: #e8f8f5; padding: 2px 8px; border-radius: 4px; margin-left: 5px; font-size: 15px; display: inline-block; box-shadow: 0 1px 3px rgba(0,0,0,0.1);}
+        button { background: #3498db; color: white; border: none; padding: 15px 40px; font-size: 18px; border-radius: 30px; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);}
+        button:hover { background: #2980b9; transform: translateY(-2px); }
+        button:disabled { background-color: #95a5a6; cursor: not-allowed; box-shadow: none; transform: none; }
+        #result-display { margin-top: 20px; font-size: 20px; font-weight: bold; display: none; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 20px;}
+    </style>
+</head>
+<body>
+<div class="container">
+    <div id="welcome-screen">
+        <h1>${testName}</h1>
+        ${teacherHtml}
+        <p>Vui lòng nhập họ và tên của em để bắt đầu:</p>
+        <input type="text" id="student-name-input" placeholder="Nhập tên vào đây..." autocomplete="off">
+        <br><button onclick="startLesson()">Bắt đầu làm bài</button>
+    </div>
+    <div id="worksheet-content">
+        <h1>${testName}</h1>
+        ${teacherHtml}
+        <div id="student-info-tag" style="font-style: italic; margin-bottom: 20px; color: #2980b9;"></div>
+        
+        ${htmlContent}
+        
+        <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee;">
+            <div id="result-display"></div>
+            <button id="submit-btn" onclick="checkAnswers()">Kiểm tra đáp án</button>
+        </div>
+    </div>
+</div>
+<script>
+    let studentName = "";
+    function startLesson() {
+        studentName = document.getElementById('student-name-input').value.trim();
+        if (!studentName) return alert("Vui lòng nhập tên!");
+        document.getElementById('welcome-screen').style.display = 'none';
+        document.getElementById('worksheet-content').style.display = 'block';
+        document.getElementById('student-info-tag').innerHTML = 'Học sinh đang làm bài: <strong>' + studentName + '</strong>';
+    }
+    
+    document.getElementById('student-name-input').addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') startLesson();
+    });
+
+    function checkAnswers() {
+        const inputs = document.querySelectorAll('#worksheet-content input[type="text"]');
+        let correctCount = 0; let total = inputs.length;
+        const btnSubmit = document.getElementById('submit-btn');
+        btnSubmit.innerHTML = "Đang nộp bài..."; btnSubmit.disabled = true;
+
+        document.querySelectorAll('.correction-label').forEach(el => el.remove());
+
+        inputs.forEach(input => {
+            if (input.value.trim().toLowerCase() === input.getAttribute('data-answer').toLowerCase()) correctCount++;
+        });
+
+        const APPS_SCRIPT_URL = "${sheetUrl}";
+        
+        fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify({ name: studentName, correct: correctCount, total: total })
+        }).then(res => res.json()).then(data => {
+            inputs.forEach(input => {
+                input.disabled = true;
+                const actualAnswer = input.getAttribute('data-answer');
+                if (input.value.trim().toLowerCase() === actualAnswer.toLowerCase()) {
+                    input.classList.add('correct');
+                } else {
+                    input.classList.add('incorrect');
+                    if (!input.value) input.value = "[Trống]";
+                    const span = document.createElement('span');
+                    span.className = 'correction-label';
+                    span.innerHTML = '✓ ' + actualAnswer;
+                    input.parentNode.insertBefore(span, input.nextSibling);
+                }
+            });
+            btnSubmit.style.display = 'none';
+            const resDiv = document.getElementById('result-display');
+            resDiv.style.display = 'block';
+            resDiv.innerHTML = 'Chúc mừng ' + studentName + '! Em đã nộp bài thành công.<br>Kết quả: ' + correctCount + ' / ' + total + ' câu đúng.';
+            resDiv.style.background = (correctCount === total) ? "#d4edda" : "#fff3cd";
+            resDiv.style.color = (correctCount === total) ? "#155724" : "#856404";
+            resDiv.scrollIntoView({ behavior: 'smooth' });
+        }).catch(err => {
+            alert("Có lỗi xảy ra khi nộp bài. Vui lòng kiểm tra kết nối mạng!"); 
+            btnSubmit.innerHTML = "Kiểm tra đáp án"; btnSubmit.disabled = false;
+        });
+    }
+<\/script>
+</body>
+</html>`;
+
+        document.getElementById('outputCode').value = studentTemplate;
+        document.getElementById('outputSection').style.display = 'block';
+    }
+
+    function copyCode() {
+        const copyText = document.getElementById("outputCode");
+        copyText.select();
+        document.execCommand("copy");
+        alert("Đã copy mã thành công! Bạn hãy mở Notepad dán vào và lưu lại với đuôi .html nhé.");
+    }
+</script>
+
+</body>
+</html>
