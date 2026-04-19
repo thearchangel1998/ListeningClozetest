@@ -52,26 +52,39 @@
         document.getElementById('teacherCustom').style.display = (this.value === 'Giáo viên khác...') ? 'block' : 'none';
     });
 
-    function createTest() {
+  function createTest() {
         const btn = document.querySelector('button');
         const url = document.getElementById('sheetUrl').value.trim();
         let teacher = document.getElementById('teacherSelect').value;
-        if (teacher === 'Giáo viên khác...') teacher = document.getElementById('teacherCustom').value;
+        if (teacher === 'Giáo viên khác...') teacher = document.getElementById('teacherCustom').value.trim();
+
+        const testName = document.getElementById('testName').value.trim();
+        const script = document.getElementById('scriptInput').value.trim();
+        const gaps = document.getElementById('gapCount').value;
+
+        // KIỂM TRA CHI TIẾT XEM THIẾU THÔNG TIN NÀO
+        let missing = [];
+        if (!testName) missing.push("Tên bài bài tập");
+        if (!script) missing.push("Nội dung Audio Script");
+        if (!url) missing.push("Web App URL (Link Google Sheets)");
+        if (teacher === 'Giáo viên khác...' && !teacher) missing.push("Tên giáo viên tùy chỉnh");
+
+        if (missing.length > 0) {
+            return alert("Hệ thống phát hiện bạn chưa điền đủ:\n- " + missing.join("\n- "));
+        }
 
         const payload = {
             action: "saveTest",
             teacher: teacher,
-            name: document.getElementById('testName').value,
-            script: document.getElementById('scriptInput').value,
-            gaps: document.getElementById('gapCount').value
+            name: testName,
+            script: script,
+            gaps: gaps
         };
-
-        if (!url || !payload.name || !payload.script) return alert("Vui lòng điền đủ thông tin!");
 
         btn.innerText = "Đang lưu...";
         btn.disabled = true;
 
-        // Gửi dữ liệu thẳng lên Google Sheets
+        // Gửi dữ liệu lên Google Sheets
         fetch(url, {
             method: "POST",
             body: JSON.stringify(payload)
@@ -80,14 +93,12 @@
             document.getElementById('msg').style.display = 'block';
             btn.innerText = "LƯU ĐỀ VÀO HỆ THỐNG";
             btn.disabled = false;
+            // Tự động xóa kịch bản để sẵn sàng tạo đề tiếp theo
+            document.getElementById('scriptInput').value = "";
         })
         .catch(err => {
-            alert("Lỗi kết nối!");
+            alert("Lỗi kết nối! Vui lòng kiểm tra lại mạng hoặc Web App URL.");
             btn.innerText = "LƯU ĐỀ VÀO HỆ THỐNG";
             btn.disabled = false;
         });
     }
-</script>
-
-</body>
-</html>
