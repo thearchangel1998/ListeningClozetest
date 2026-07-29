@@ -14,6 +14,9 @@
         button { background: #27ae60; color: white; border: none; padding: 15px; border-radius: 6px; cursor: pointer; width: 100%; margin-top: 20px; font-weight: bold; font-size: 16px; transition: 0.3s; }
         button:hover { background: #2196f3; }
         .success { display: none; margin-top: 20px; padding: 15px; background: #d4edda; color: #155724; border-radius: 6px; text-align: center; font-weight: bold; }
+        
+        /* CSS cho phần hướng dẫn */
+        .instruction-note { font-size: 13px; color: #d35400; margin-top: 4px; margin-bottom: 8px; font-style: italic; background: #fdf2e9; padding: 8px; border-radius: 6px; border-left: 4px solid #e67e22; }
     </style>
 </head>
 <body>
@@ -33,10 +36,16 @@
     <input type="text" id="testName" placeholder="Ví dụ: Listening Test 01 - Part 1">
 
     <label>3. Nội dung Audio Script (Tiếng Anh):</label>
+    <div class="instruction-note">
+        💡 <b>Mẹo:</b> Để chủ động chọn từ cần đục lỗ, hãy bọc từ đó trong cặp dấu sao. <br>
+        Ví dụ: <code>I hope the weather will be **terrible** in Italy.</code><br>
+        <i>(Hệ thống sẽ tự đếm số lượng từ được đánh dấu).</i>
+    </div>
     <textarea id="scriptInput" placeholder="Dán kịch bản vào đây..."></textarea>
 
     <label>4. Số lượng lỗ đục:</label>
     <input type="number" id="gapCount" value="10" min="1">
+    <small id="gapStatus" style="color: #27ae60; font-weight: bold; display: none;">Đang áp dụng chế độ tự chọn từ khóa!</small>
 
     <label>5. Web App URL (Đã khóa cứng):</label>
     <input type="text" id="sheetUrl" value="https://script.google.com/macros/s/AKfycby4sk9xnNXe2BMs35n1ZG26wtL38SQMz5RB-gq96MimVilXWG1QNQz3Xim6sUeAyTs8/exec" style="background:#e8f0fe;" readonly>
@@ -47,10 +56,34 @@
 </div>
 
 <script>
+    // Xử lý hiển thị ô nhập tên giáo viên khác
     document.getElementById('teacherSelect').addEventListener('change', function() {
         document.getElementById('teacherCustom').style.display = (this.value === 'Giáo viên khác...') ? 'block' : 'none';
     });
 
+    // Tính năng tự động đếm số lượng từ khóa thủ công (**)
+    const scriptInput = document.getElementById('scriptInput');
+    const gapCountInput = document.getElementById('gapCount');
+    const gapStatus = document.getElementById('gapStatus');
+
+    scriptInput.addEventListener('input', function() {
+        const text = this.value;
+        // Sử dụng Regex để tìm tất cả các từ được bọc trong **...**
+        const matches = text.match(/\*\*(.*?)\*\*/g);
+
+        if (matches && matches.length > 0) {
+            gapCountInput.value = matches.length; // Tự động điền số lượng
+            gapCountInput.disabled = true;        // Khóa không cho sửa
+            gapCountInput.style.background = "#e8f0fe";
+            gapStatus.style.display = "block";
+        } else {
+            gapCountInput.disabled = false;       // Mở khóa nếu không tìm thấy **
+            gapCountInput.style.background = "#fff";
+            gapStatus.style.display = "none";
+        }
+    });
+
+    // Hàm gửi dữ liệu
     function createTest() {
         const btn = document.querySelector('button');
         const url = document.getElementById('sheetUrl').value.trim();
@@ -64,7 +97,7 @@
         let missing = [];
         if (!testName) missing.push("Tên bài bài tập");
         if (!script) missing.push("Nội dung Audio Script");
-        if (!teacher) missing.push("Tên giáo viên tùy chỉnh");
+        if (teacher === 'Giáo viên khác...' && !document.getElementById('teacherCustom').value.trim()) missing.push("Tên giáo viên tùy chỉnh");
 
         if (missing.length > 0) {
             alert("Hệ thống phát hiện bạn chưa điền đủ:\n- " + missing.join("\n- "));
@@ -76,7 +109,7 @@
             teacher: teacher,
             name: testName,
             script: script,
-            gaps: gaps
+            gaps: gaps // Dù nhập tay hay tự động thì số này luôn chính xác
         };
 
         btn.innerText = "Đang lưu...";
@@ -97,6 +130,12 @@
             btn.innerText = "LƯU ĐỀ VÀO HỆ THỐNG";
             btn.disabled = false;
             document.getElementById('scriptInput').value = ""; 
+            
+            // Reset lại giao diện phần đếm lỗ
+            gapCountInput.disabled = false;
+            gapCountInput.style.background = "#fff";
+            gapStatus.style.display = "none";
+            gapCountInput.value = 10;
         })
         .catch(err => {
             alert("Lỗi kết nối mạng cục bộ!");
